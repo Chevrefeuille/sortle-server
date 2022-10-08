@@ -48,7 +48,3 @@ def check_answer():
             correction[rank] = 1
     response = {"score": score, "correction": correction, "ranking": daily["choices"]}
     return response
-
-
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=9007)
