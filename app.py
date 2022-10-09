@@ -29,7 +29,7 @@ def get_daily():
         "criterion": daily["criterion"],
         "unit": daily["unit"],
         "left": daily["left"],
-        "right": daily["left"],
+        "right": daily["right"],
         "choices": [choice["name"] for choice in daily["choices"]],
     }
     return response
