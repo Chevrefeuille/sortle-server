@@ -28,6 +28,8 @@ def get_daily():
         "id": str(daily["_id"]),
         "criterion": daily["criterion"],
         "unit": daily["unit"],
+        "left": daily["left"],
+        "right": daily["left"],
         "choices": [choice["name"] for choice in daily["choices"]],
     }
     return response
