@@ -27,7 +27,6 @@ def get_daily():
     response = {
         "id": str(daily["_id"]),
         "criterion": daily["criterion"],
-        "unit": daily["unit"],
         "left": daily["left"],
         "right": daily["right"],
         "choices": [choice["name"] for choice in daily["choices"]],
