@@ -17,16 +17,18 @@ db = client.sortle
 rankings = db.rankings
 
 
-@app.route("/daily")
+@app.route("/daily", methods=["GET"])
 @cross_origin(supports_credentials=True)
 def get_daily():
     all_rankings = list(rankings.find({}))
-    random.seed(datetime.now())
+    now = datetime.now()
+    random.seed(now.day + now.month + now.year)
     rnd_index = random.randint(0, len(all_rankings) - 1)
     daily = all_rankings[rnd_index]
     response = {
         "id": str(daily["_id"]),
         "criterion": daily["criterion"],
+        "type": daily["type"],
         "left": daily["left"],
         "right": daily["right"],
         "choices": [choice["name"] for choice in daily["choices"]],
