@@ -13,8 +13,10 @@ mongoose
     process.exit();
   });
 
+const port = process.env.PORT || 3000;
+
 const app = express();
 
 app.use(express.json());
 app.use("/api/", rankingRouter);
-app.listen(3000);
+app.listen(port, () => console.log(`App listening on port ${port}.`));
