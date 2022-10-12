@@ -1,5 +1,5 @@
 import express from "express";
-import { Ranking } from "./schema";
+import { Ranking, IChoice } from "./schema";
 import { checkJwt } from "../auth";
 import seedrandom from "seedrandom";
 
@@ -42,7 +42,33 @@ rankingRouter.get("/daily", async (_req, res) => {
       choice.value = "";
       return choice;
     });
-    return res.status(201).json(dailyRanking);
+    return res.status(200).json(dailyRanking);
+  } catch (err) {
+    return res.status(500).send({ message: err });
+  }
+});
+
+rankingRouter.post("/check", async (req, res) => {
+  try {
+    const proposedChoices = req.body["ranking"];
+    const dailyRanking = await Ranking.findById(req.body["id"]);
+    if (!dailyRanking) {
+      throw "No corresponding ranking.";
+    }
+    let score = 0;
+    const correction = new Array(5).fill(0);
+    proposedChoices.forEach((choice: IChoice, i: number) => {
+      if (choice.name == dailyRanking.choices[i].name) {
+        correction[i] = 1;
+        score++;
+      }
+    });
+    const response = {
+      score: score,
+      correction: correction,
+      ranking: dailyRanking,
+    };
+    return res.status(200).json(response);
   } catch (err) {
     return res.status(500).send({ message: err });
   }

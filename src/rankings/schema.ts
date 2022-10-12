@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
 
-interface IChoice {
+export interface IChoice {
   name: string;
   rank: number;
   value?: string;
