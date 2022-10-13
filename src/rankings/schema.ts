@@ -3,7 +3,7 @@ import { Schema, model } from "mongoose";
 export interface IChoice {
   name: string;
   rank: number;
-  value?: string;
+  value: string;
 }
 
 interface IRanking {
@@ -33,7 +33,7 @@ const rankingSchema = new Schema<IRanking>(
         {
           name: { type: String, required: true },
           rank: { type: Number, required: true, min: 0, max: 4 },
-          value: { type: String, required: false },
+          value: { type: String, required: true },
         },
       ],
       required: true,
