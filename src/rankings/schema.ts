@@ -2,7 +2,6 @@ import { Schema, model } from "mongoose";
 
 export interface IChoice {
   name: string;
-  rank: number;
   value: string;
 }
 

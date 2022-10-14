@@ -38,7 +38,6 @@ rankingRouter.get("/daily", async (_req, res) => {
     const dailyRanking = rankings[Math.floor(generator() * rankings.length)];
     // hide ranking and value for the choices
     dailyRanking.choices.map((choice) => {
-      choice.rank = -1;
       choice.value = "";
       return choice;
     });
@@ -48,6 +47,27 @@ rankingRouter.get("/daily", async (_req, res) => {
   }
 });
 
+const computeKendallTauDistance = (
+  proposed: IChoice[],
+  expected: IChoice[]
+) => {
+  const order = proposed.map((proposedChoice) =>
+    expected.findIndex(
+      (expextedChoice) => expextedChoice.name == proposedChoice.name
+    )
+  ); // order proposed by the player (in terms of index)
+  let nCorrect = 0;
+  const n = proposed.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (order[i] < order[j]) {
+        nCorrect += 1;
+      }
+    }
+  }
+  return (nCorrect / ((n * (n - 1)) / 2)) * 100;
+};
+
 rankingRouter.post("/check", async (req, res) => {
   try {
     const proposedChoices = req.body["ranking"];
@@ -56,6 +76,11 @@ rankingRouter.post("/check", async (req, res) => {
       throw "No corresponding ranking.";
     }
     let score = 0;
+    const kendallScore = computeKendallTauDistance(
+      proposedChoices,
+      dailyRanking.choices
+    );
+    console.log(kendallScore);
     const correction = new Array(5).fill(0);
     proposedChoices.forEach((choice: IChoice, i: number) => {
       if (choice.name == dailyRanking.choices[i].name) {
@@ -64,6 +89,7 @@ rankingRouter.post("/check", async (req, res) => {
       }
     });
     const response = {
+      kendallScore: kendallScore,
       score: score,
       correction: correction,
       ranking: dailyRanking,
