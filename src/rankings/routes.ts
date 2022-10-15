@@ -6,7 +6,7 @@ import seedrandom from "seedrandom";
 const rankingRouter = express.Router();
 
 // get all rankings
-rankingRouter.get("/rankings", async (_req, res) => {
+rankingRouter.get("/rankings", checkJwt, async (_req, res) => {
   try {
     const rankings = await Ranking.find({});
     return res.status(200).json(rankings);
