@@ -6,10 +6,22 @@ import seedrandom from "seedrandom";
 const rankingRouter = express.Router();
 
 // get all rankings
-rankingRouter.get("/rankings", checkJwt, async (_req, res) => {
+rankingRouter.get("/rankings", checkJwt, async (req, res) => {
+  const page = req.query.page ? parseInt(req.query.page as string) : 1;
+  const limit = req.query.limit ? parseInt(req.query.limit as string) : 2;
+
   try {
-    const rankings = await Ranking.find({});
-    return res.status(200).json(rankings);
+    const count = await Ranking.countDocuments();
+    const rankings = await Ranking.find()
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+    return res.status(200).json({
+      rankings,
+      total: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+    });
   } catch (err) {
     return res.status(500).send({ message: err });
   }
