@@ -7,8 +7,10 @@ const rankingRouter = express.Router();
 
 // get all rankings
 rankingRouter.get("/rankings", checkJwt, async (req, res) => {
-  const page = req.query.page ? parseInt(req.query.page as string) : 1;
-  const limit = req.query.limit ? parseInt(req.query.limit as string) : 2;
+  const page: number = req.query.page ? parseInt(req.query.page as string) : 1;
+  const limit: number = req.query.limit
+    ? parseInt(req.query.limit as string)
+    : 2;
 
   try {
     const count = await Ranking.countDocuments();
@@ -22,6 +24,17 @@ rankingRouter.get("/rankings", checkJwt, async (req, res) => {
       totalPages: Math.ceil(count / limit),
       currentPage: page,
     });
+  } catch (err) {
+    return res.status(500).send({ message: err });
+  }
+});
+
+// get ranking by id
+rankingRouter.get("/rankings/:rankingId", checkJwt, async (req, res) => {
+  try {
+    const rankingId = req.params.rankingId;
+    const ranking = await Ranking.findById(rankingId);
+    return res.status(201).json(ranking);
   } catch (err) {
     return res.status(500).send({ message: err });
   }
@@ -41,7 +54,6 @@ rankingRouter.post("/rankings", checkJwt, async (req, res) => {
 rankingRouter.patch("/rankings/:rankingId", checkJwt, async (req, res) => {
   try {
     const rankingId = req.params.rankingId;
-    console.log(req.body);
     const ranking = await Ranking.findByIdAndUpdate(rankingId, req.body, {
       new: true,
     });
