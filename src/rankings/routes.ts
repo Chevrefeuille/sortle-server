@@ -37,13 +37,27 @@ rankingRouter.post("/rankings", checkJwt, async (req, res) => {
   }
 });
 
+// edit ranking
+rankingRouter.patch("/rankings/:rankingId", checkJwt, async (req, res) => {
+  try {
+    const rankingId = req.params.rankingId;
+    console.log(req.body);
+    const ranking = await Ranking.findByIdAndUpdate(rankingId, req.body, {
+      new: true,
+    });
+    return res.status(201).json(ranking);
+  } catch (err) {
+    return res.status(500).send({ message: err });
+  }
+});
+
 rankingRouter.get("/daily", async (_req, res) => {
   try {
-    const lastWeek = new Date();
-    lastWeek.setDate(lastWeek.getDate() - 7);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
     const rankings = await Ranking.find({
-      reviewed: true,
-      createdAt: { $lt: lastWeek },
+      // reviewed: true,
+      createdAt: { $lt: yesterday },
     });
     const now = new Date();
     const generator = seedrandom(now.toDateString());
