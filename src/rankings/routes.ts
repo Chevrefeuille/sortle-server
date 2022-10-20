@@ -1,6 +1,11 @@
 import express from "express";
 import { Ranking, IChoice } from "./schema";
+import { Record } from "../history/schema";
+
 import { checkJwt } from "../auth";
+
+import startOfDay from "date-fns/startOfDay";
+import sub from "date-fns/sub";
 import seedrandom from "seedrandom";
 
 const rankingRouter = express.Router();
@@ -10,7 +15,7 @@ rankingRouter.get("/rankings", checkJwt, async (req, res) => {
   const page: number = req.query.page ? parseInt(req.query.page as string) : 1;
   const limit: number = req.query.limit
     ? parseInt(req.query.limit as string)
-    : 2;
+    : 10;
 
   try {
     const count = await Ranking.countDocuments();
@@ -32,9 +37,9 @@ rankingRouter.get("/rankings", checkJwt, async (req, res) => {
 // get ranking by id
 rankingRouter.get("/rankings/:rankingId", checkJwt, async (req, res) => {
   try {
-    const rankingId = req.params.rankingId;
+    const rankingId = req.params.rankingId as string;
     const ranking = await Ranking.findById(rankingId);
-    return res.status(201).json(ranking);
+    return res.status(200).json(ranking);
   } catch (err) {
     return res.status(500).send({ message: err });
   }
@@ -53,27 +58,53 @@ rankingRouter.post("/rankings", checkJwt, async (req, res) => {
 // edit ranking
 rankingRouter.patch("/rankings/:rankingId", checkJwt, async (req, res) => {
   try {
-    const rankingId = req.params.rankingId;
+    const rankingId = req.params.rankingId as string;
     const ranking = await Ranking.findByIdAndUpdate(rankingId, req.body, {
       new: true,
     });
-    return res.status(201).json(ranking);
+    return res.status(200).json(ranking);
   } catch (err) {
     return res.status(500).send({ message: err });
   }
 });
 
+// get daily ranking
 rankingRouter.get("/daily", async (_req, res) => {
   try {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const rankings = await Ranking.find({
-      // reviewed: true,
-      createdAt: { $lt: yesterday },
+    // check if daily ranking has already been set
+    const today = new Date();
+    const record = await Record.findOne({
+      date: { $gte: startOfDay(today) },
     });
-    const now = new Date();
-    const generator = seedrandom(now.toDateString());
-    const dailyRanking = rankings[Math.floor(generator() * rankings.length)];
+
+    let dailyRanking;
+    if (record) {
+      // already set, return ranking
+      dailyRanking = await Ranking.findById(record.ranking);
+    } else {
+      const lastMonth = sub(today, { months: 1 });
+      // find ranking not played in at least one month
+      const rankings = await Ranking.find({
+        $or: [
+          { lastPlayedAt: { $lt: lastMonth } },
+          { lastPlayedAt: { $exists: false } },
+        ],
+      });
+      const generator = seedrandom(today.toDateString());
+      dailyRanking = rankings[Math.floor(generator() * rankings.length)];
+      // update history
+      const dailyRecord = new Record({
+        date: today,
+        ranking: dailyRanking._id,
+      });
+      await dailyRecord.save();
+    }
+    if (!dailyRanking) throw "Error while finding daily ranking";
+
+    // update ranking last played
+    dailyRanking.lastPlayedAt = startOfDay(today);
+    await dailyRanking.save();
+
     // hide ranking and value for the choices
     dailyRanking.choices.map((choice) => {
       choice.value = "";

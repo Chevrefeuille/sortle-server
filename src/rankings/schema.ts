@@ -14,6 +14,7 @@ interface IRanking {
   type: string;
   choices: IChoice[];
   reviewed: boolean;
+  lastPlayedAt?: Date;
 }
 
 const validateChoices = (array: IChoice[]) => {
@@ -27,6 +28,7 @@ const rankingSchema = new Schema<IRanking>(
     right: { type: String, required: true },
     type: { type: String, required: true },
     reviewed: { type: Boolean, default: false },
+    lastPlayedAt: { type: Date, required: false },
     choices: {
       type: [
         {
