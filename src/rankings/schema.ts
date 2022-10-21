@@ -3,9 +3,10 @@ import { Schema, model } from "mongoose";
 export interface IChoice {
   name: string;
   value: string;
+  rank?: number;
 }
 
-interface IRanking {
+export interface IRanking {
   createdAt: Date;
   updatedAt: Date;
   criterion: string;

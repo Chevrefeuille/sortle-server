@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import cors from "cors";
 
 import { rankingRouter } from "./rankings/routes";
-import { recordRouter } from "./history/route";
 
 mongoose
   .connect(process.env.MONGO_DB || "")
@@ -22,5 +21,4 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/api/", rankingRouter);
-app.use("/api/", recordRouter);
 app.listen(port, () => console.log(`App listening on port ${port}.`));

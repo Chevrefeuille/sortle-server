@@ -1,12 +1,13 @@
 import express from "express";
-import { Ranking, IChoice } from "./schema";
+import { Ranking, IChoice, IRanking } from "./schema";
 import { Record } from "../history/schema";
 
 import { checkJwt } from "../auth";
+import { startOfDay, subMonths, isSameDay } from "date-fns";
 
-import startOfDay from "date-fns/startOfDay";
-import sub from "date-fns/sub";
 import seedrandom from "seedrandom";
+
+import { shuffle } from "lodash";
 
 const rankingRouter = express.Router();
 
@@ -35,7 +36,7 @@ rankingRouter.get("/rankings", checkJwt, async (req, res) => {
 });
 
 // get ranking by id
-rankingRouter.get("/rankings/:rankingId", checkJwt, async (req, res) => {
+rankingRouter.get("/rankings/:rankingId", async (req, res) => {
   try {
     const rankingId = req.params.rankingId as string;
     const ranking = await Ranking.findById(rankingId);
@@ -48,7 +49,7 @@ rankingRouter.get("/rankings/:rankingId", checkJwt, async (req, res) => {
 // add new ranking
 rankingRouter.post("/rankings", checkJwt, async (req, res) => {
   try {
-    const ranking = await Ranking.create(req.body);
+    const ranking: IRanking = await Ranking.create(req.body);
     return res.status(201).json(ranking);
   } catch (err) {
     return res.status(500).send({ message: err });
@@ -63,54 +64,6 @@ rankingRouter.patch("/rankings/:rankingId", checkJwt, async (req, res) => {
       new: true,
     });
     return res.status(200).json(ranking);
-  } catch (err) {
-    return res.status(500).send({ message: err });
-  }
-});
-
-// get daily ranking
-rankingRouter.get("/daily", async (_req, res) => {
-  try {
-    // check if daily ranking has already been set
-    const today = new Date();
-    const record = await Record.findOne({
-      date: { $gte: startOfDay(today) },
-    });
-
-    let dailyRanking;
-    if (record) {
-      // already set, return ranking
-      dailyRanking = await Ranking.findById(record.ranking);
-    } else {
-      const lastMonth = sub(today, { months: 1 });
-      // find ranking not played in at least one month
-      const rankings = await Ranking.find({
-        $or: [
-          { lastPlayedAt: { $lt: lastMonth } },
-          { lastPlayedAt: { $exists: false } },
-        ],
-      });
-      const generator = seedrandom(today.toDateString());
-      dailyRanking = rankings[Math.floor(generator() * rankings.length)];
-      // update history
-      const dailyRecord = new Record({
-        date: today,
-        ranking: dailyRanking._id,
-      });
-      await dailyRecord.save();
-    }
-    if (!dailyRanking) throw "Error while finding daily ranking";
-
-    // update ranking last played
-    dailyRanking.lastPlayedAt = startOfDay(today);
-    await dailyRanking.save();
-
-    // hide ranking and value for the choices
-    dailyRanking.choices.map((choice) => {
-      choice.value = "";
-      return choice;
-    });
-    return res.status(200).json(dailyRanking);
   } catch (err) {
     return res.status(500).send({ message: err });
   }
@@ -137,10 +90,12 @@ const computeKendallTauDistance = (
   return (nCorrect / ((n * (n - 1)) / 2)) * 100;
 };
 
-rankingRouter.post("/check", async (req, res) => {
+rankingRouter.post("/rankings/check", async (req, res) => {
   try {
     const proposedChoices = req.body["ranking"];
-    const dailyRanking = await Ranking.findById(req.body["id"]);
+    const dailyRanking: IRanking | null = await Ranking.findById(
+      req.body["id"]
+    );
     if (!dailyRanking) {
       throw "No corresponding ranking.";
     }
@@ -149,7 +104,6 @@ rankingRouter.post("/check", async (req, res) => {
       proposedChoices,
       dailyRanking.choices
     );
-    console.log(kendallScore);
     const correction = new Array(5).fill(0);
     proposedChoices.forEach((choice: IChoice, i: number) => {
       if (choice.name == dailyRanking.choices[i].name) {
@@ -164,6 +118,66 @@ rankingRouter.post("/check", async (req, res) => {
       ranking: dailyRanking,
     };
     return res.status(200).json(response);
+  } catch (err) {
+    return res.status(500).send({ message: err });
+  }
+});
+
+// fetch ranking by date
+rankingRouter.get("/rankings/date/:date", async (req, res) => {
+  try {
+    const date = new Date(req.params.date);
+    const startToday = startOfDay(new Date());
+
+    let ranking;
+
+    // if fetching today's record, check if it was set already
+
+    if (isSameDay(date, startToday)) {
+      const record = await Record.findOne({
+        date: startToday,
+      });
+      if (record) {
+        // already set, return ranking
+        ranking = await Ranking.findById(record.ranking);
+      } else {
+        const lastMonth = subMonths(startToday, 1);
+        // find ranking not played in at least one month
+        const rankings = await Ranking.find({
+          $or: [
+            { lastPlayedAt: { $lt: lastMonth } },
+            { lastPlayedAt: { $exists: false } },
+          ],
+        });
+        const generator = seedrandom(startToday.toDateString());
+        ranking = rankings[Math.floor(generator() * rankings.length)];
+        // update history
+        const dailyRecord = new Record({
+          date: startToday,
+          ranking: ranking._id,
+        });
+        await dailyRecord.save();
+      }
+      if (!ranking) throw "Error fetching daily ranking.";
+      // hide info and shuffle for daily ranking
+      ranking.choices = ranking.choices.map((choice: IChoice) => {
+        return { value: "", name: choice.name };
+      });
+      ranking.choices = shuffle(ranking.choices);
+    } else if (date > startToday) {
+      throw "Can't access future records.";
+    } else {
+      const record = await Record.findOne({
+        date: date,
+      });
+      if (record) {
+        ranking = await Ranking.findById(record.ranking);
+      }
+    }
+    if (!ranking) {
+      return res.status(404).send("Resource not found.");
+    }
+    return res.status(200).json(ranking);
   } catch (err) {
     return res.status(500).send({ message: err });
   }
