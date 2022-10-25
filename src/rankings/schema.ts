@@ -45,4 +45,6 @@ const rankingSchema = new Schema<IRanking>(
   { timestamps: true }
 );
 
+rankingSchema.index({ "$**": "text" });
+
 export const Ranking = model<IRanking>("Ranking", rankingSchema);
