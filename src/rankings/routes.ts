@@ -11,6 +11,20 @@ import { shuffle } from "lodash";
 
 const rankingRouter = express.Router();
 
+rankingRouter.get("/rankings/search", checkJwt, async (req, res) => {
+  try {
+    const searchQuery: string = req.query.query
+      ? (req.query.query as string)
+      : "";
+    const rankings = await Ranking.find()
+      .find({ $text: { $search: searchQuery } })
+      .exec();
+    return res.status(200).json(rankings);
+  } catch (err) {
+    return res.status(500).send({ message: err });
+  }
+});
+
 // get all rankings
 rankingRouter.get("/rankings", checkJwt, async (req, res) => {
   const page: number = req.query.page ? parseInt(req.query.page as string) : 1;
