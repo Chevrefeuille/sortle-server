@@ -35,6 +35,7 @@ rankingRouter.get("/rankings", checkJwt, async (req, res) => {
   try {
     const count = await Ranking.countDocuments();
     const rankings = await Ranking.find()
+      .sort({ updatedAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();
@@ -146,7 +147,6 @@ rankingRouter.get("/rankings/date/:date", async (req, res) => {
     let ranking;
 
     // if fetching today's record, check if it was set already
-
     if (isSameDay(date, startToday)) {
       const record = await Record.findOne({
         date: startToday,
@@ -155,8 +155,8 @@ rankingRouter.get("/rankings/date/:date", async (req, res) => {
         // already set, return ranking
         ranking = await Ranking.findById(record.ranking);
       } else {
-        const lastMonth = subMonths(startToday, 1);
-        // find ranking not played in at least one month
+        const lastMonth = subMonths(startToday, 6);
+        // find ranking not played in at least 6 months
         const rankings = await Ranking.find({
           $or: [
             { lastPlayedAt: { $lt: lastMonth } },
