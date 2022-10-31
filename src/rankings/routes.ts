@@ -16,7 +16,7 @@ rankingRouter.get("/rankings/search", checkJwt, async (req, res) => {
     const searchQuery: string = req.query.query
       ? (req.query.query as string)
       : "";
-    const rankings = await Ranking.find()
+    const rankings: IRanking[] = await Ranking.find()
       .find({ $text: { $search: searchQuery } })
       .exec();
     return res.status(200).json(rankings);
