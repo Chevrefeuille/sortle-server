@@ -132,6 +132,20 @@ rankingRouter.post("/rankings/check", async (req, res) => {
       correction: correction,
       ranking: dailyRanking,
     };
+    // update record statistics
+    const record = await Record.findOne({
+      date: startOfDay(new Date()),
+    });
+    if (record && record.ranking == req.body["id"] && record.statistics) {
+      const n = record.statistics.players;
+      console.log(record.statistics.meanKendallScore);
+      record.statistics.players++;
+      record.statistics.meanScore =
+        (record.statistics.meanScore * n + score) / (n + 1);
+      record.statistics.meanKendallScore =
+        (record.statistics.meanKendallScore * n + kendallScore) / (n + 1);
+      await record.save();
+    }
     return res.status(200).json(response);
   } catch (err) {
     return res.status(500).send({ message: err });
@@ -169,6 +183,11 @@ rankingRouter.get("/rankings/date/:date", async (req, res) => {
         const dailyRecord = new Record({
           date: startToday,
           ranking: ranking._id,
+          statistics: {
+            players: 0,
+            meanScore: 0,
+            meanKendallScore: 0,
+          },
         });
         await dailyRecord.save();
       }
