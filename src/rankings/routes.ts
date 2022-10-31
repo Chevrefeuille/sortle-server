@@ -138,7 +138,6 @@ rankingRouter.post("/rankings/check", async (req, res) => {
     });
     if (record && record.ranking == req.body["id"] && record.statistics) {
       const n = record.statistics.players;
-      console.log(record.statistics.meanKendallScore);
       record.statistics.players++;
       record.statistics.meanScore =
         (record.statistics.meanScore * n + score) / (n + 1);
