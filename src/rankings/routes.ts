@@ -188,6 +188,9 @@ rankingRouter.get("/rankings/date/:date", async (req, res) => {
             meanKendallScore: 0,
           },
         });
+        // update record date
+        ranking.lastPlayedAt = startToday;
+        ranking.save();
         await dailyRecord.save();
       }
       if (!ranking) throw "Error fetching daily ranking.";
