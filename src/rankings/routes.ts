@@ -168,7 +168,7 @@ rankingRouter.get("/rankings/date/:date", async (req, res) => {
         // already set, return ranking
         ranking = await Ranking.findById(record.ranking);
       } else {
-        const lastMonth = subMonths(startToday, 6);
+        const lastMonth = subMonths(startToday, 3);
         // find ranking not played in at least 6 months
         const rankings = await Ranking.find({
           $or: [
